@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>迷雾迷宫 · FOG MAZE</title>
+<style>
+  :root{
+    --bg:#f6f7f9;
+    --panel:#ffffff;
+    --line:#e3e6ec;
+    --ink:#1a1d23;
+    --ink2:#5b6472;
+    --ink3:#8b95a6;
+    --accent:#4f46e5;
+    --gold:#e0a400;
+    --p1:#e5484d; --p2:#3b82f6; --p3:#10b981; --p4:#f59e0b;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:linear-gradient(180deg,#f4f5f8 0%,#eef0f4 100%); color:var(--ink);
+    font-family:"PingFang SC","Microsoft YaHei",-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:14px; line-height:1.6;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:22px 20px 60px;}
+  header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px;}
+  h1{font-size:24px;margin:0;letter-spacing:.5px;}
+  h1 span{background:linear-gradient(92deg,#534AB7 10%,#8f7ff0 60%,#3b82f6);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .sub{color:var(--ink3);font-size:12.5px;margin-top:2px;}
+  .seedbox{font-size:12px;color:var(--ink2);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;box-shadow:0 1px 2px rgba(20,23,29,.04);}
+  .seedbox b{color:var(--ink);font-variant-numeric:tabular-nums;}
+
+  .layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:18px;align-items:start;}
+  @media (max-width:940px){ .layout{grid-template-columns:1fr;} }
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 1px 2px rgba(20,23,29,.04),0 6px 20px rgba(20,23,29,.05);}
+  .card h2{font-size:13px;margin:0;padding:12px 14px;border-bottom:1px solid var(--line);letter-spacing:.6px;color:var(--ink2);font-weight:600;display:flex;justify-content:space-between;align-items:center;}
+  .card .body{padding:14px;}
+
+  /* map */
+  .mapcard{padding:14px;}
+  .maptop{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;flex-wrap:wrap;}
+  .turnchip{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;}
+  .dot{width:11px;height:11px;border-radius:50%;display:inline-block;}
+  .apbar{display:flex;gap:5px;align-items:center;}
+  .ap{width:22px;height:8px;border-radius:4px;background:#e6e9ef;}
+  .ap.on{background:var(--accent);}
+  .aptext{font-size:12px;color:var(--ink3);margin-left:4px;}
+  canvas{display:block;width:100%;height:auto;border-radius:10px;background:#0c0f16;cursor:crosshair;box-shadow:0 8px 28px rgba(10,14,20,.30),inset 0 0 0 1px rgba(255,255,255,.05);}
+  .hint{font-size:12px;color:var(--ink3);margin-top:10px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+  kbd{background:#f0f2f6;border:1px solid #d8dce4;border-bottom-width:2px;border-radius:5px;padding:1px 6px;font-size:11.5px;font-family:inherit;color:var(--ink2);}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink2);margin-top:10px;}
+  .legend i{width:12px;height:12px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:-2px;}
+  .legend b{font-size:13px;margin-right:4px;}
+  .postag{font-size:12px;color:var(--ink2);background:#f2f4f8;border:1px solid var(--line);border-radius:20px;padding:2px 10px;white-space:nowrap;}
+
+  /* right column */
+  aside{display:flex;flex-direction:column;gap:14px;}
+  .rules ol{margin:0;padding-left:20px;}
+  .rules li{margin-bottom:7px;font-size:13px;color:var(--ink2);}
+  .rules li b{color:var(--ink);}
+  .layers{display:flex;flex-direction:column;gap:8px;}
+  .layer{border:1px solid var(--line);border-radius:10px;padding:9px 11px;background:#fbfcfd;}
+  .layer .lh{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;}
+  .tag{font-size:10px;padding:1px 6px;border-radius:20px;border:1px solid var(--line);color:var(--ink3);font-weight:600;}
+  .tag.pub{background:#eef2ff;color:#4338ca;border-color:#dfe3ff;}
+  .tag.priv{background:#fff1f2;color:#be123c;border-color:#ffe4e6;}
+  .layer p{margin:4px 0 0;font-size:12px;color:var(--ink2);}
+
+  .plist{display:flex;flex-direction:column;gap:9px;}
+  .pitem{border:1px solid var(--line);border-radius:11px;padding:9px 11px;display:flex;flex-direction:column;gap:6px;background:#fbfcfd;transition:border-color .18s,background .18s,box-shadow .18s;}
+  .pitem.active{border-color:var(--accent);background:#f5f4ff;box-shadow:inset 3px 0 0 var(--accent),0 0 0 3px rgba(79,70,229,.09);}
+  .pitem .r1{display:flex;align-items:center;gap:8px;justify-content:space-between;}
+  .pname{font-weight:700;font-size:13px;display:flex;align-items:center;gap:7px;}
+  .pstat{font-size:11.5px;color:var(--ink3);font-variant-numeric:tabular-nums;}
+  .pitem .r2{display:flex;align-items:center;gap:6px;justify-content:space-between;}
+  .mini{font-size:11px;color:var(--ink3);}
+  .toggle{font-size:11px;border:1px solid var(--line);background:#fff;border-radius:7px;padding:3px 9px;cursor:pointer;color:var(--ink2);}
+  .toggle.on{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+  .intel{display:flex;flex-direction:column;gap:8px;max-height:250px;overflow:auto;}
+  .intel .it{border-left:3px solid var(--accent);background:#fbfcfd;border-radius:0 9px 9px 0;padding:7px 10px;font-size:12.5px;}
+  .intel .it .k{font-weight:700;font-size:11.5px;color:var(--accent);}
+  .intel .empty{color:var(--ink3);font-size:12.5px;}
+  .scrollbox{max-height:230px;overflow:auto;}
+
+  .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;}
+  button.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:9px;padding:8px 14px;font-size:13px;cursor:pointer;font-family:inherit;transition:transform .12s,border-color .12s,color .12s,box-shadow .12s;}
+  button.btn:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px);box-shadow:0 3px 10px rgba(20,23,29,.08);}
+  button.btn:active{transform:translateY(0);}
+  button.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+  button.btn.primary:hover{opacity:.9;color:#fff;}
+  select{border:1px solid var(--line);border-radius:9px;padding:7px 10px;font-size:13px;font-family:inherit;background:#fff;color:var(--ink);}
+  label.fl{font-size:12.5px;color:var(--ink2);display:flex;align-items:center;gap:6px;}
+
+  .toast{position:fixed;left:50%;top:22px;transform:translateX(-50%) translateY(-24px);opacity:0;transition:.25s;
+    background:rgba(26,29,35,.94);color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;z-index:50;pointer-events:none;max-width:80vw;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .overlay{position:fixed;inset:0;background:rgba(20,23,29,.55);display:none;align-items:center;justify-content:center;z-index:60;backdrop-filter:blur(3px);}
+  .overlay.show{display:flex;}
+  .win{background:#fff;border-radius:16px;padding:26px 30px;max-width:420px;text-align:center;}
+  .win h3{margin:0 0 6px;font-size:20px;}
+  .win p{margin:6px 0;color:var(--ink2);font-size:13px;}
+  .win table{width:100%;margin-top:12px;font-size:12.5px;border-collapse:collapse;}
+  .win td,.win th{padding:5px 6px;border-bottom:1px solid var(--line);text-align:left;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>迷雾迷宫 · <span>FOG MAZE</span></h1>
+      <div class="sub">入口数量 = 玩家数量 · 出口唯一 · 战争迷雾 · 视野不共享</div>
+    </div>
+    <div class="seedbox">
+      地图种子 <b id="seedTxt">—</b> · 网格 <b id="dimTxt">—</b> · 入口 <b id="entTxt">—</b> · 情报碎片 <b id="fragTxt">—</b>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- ================= 地图 ================= -->
+    <section class="card mapcard">
+      <div class="maptop">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div class="turnchip">
+            <span class="dot" id="turnDot"></span>
+            <span id="turnTxt">—</span>
+          </div>
+          <span class="postag" id="posTag">位置：—</span>
+        </div>
+        <div class="apbar">
+          <span id="apDots"></span>
+          <span class="aptext" id="apTxt"></span>
+        </div>
+      </div>
+
+      <canvas id="cv" width="620" height="620"></canvas>
+
+      <div class="legend">
+        <span><i style="background:#0c0f16;border:1px solid #3a4150"></i>迷雾（未知）</span>
+        <span><i style="background:#6e6873"></i>记忆中的通路</span>
+        <span><i style="background:#eae3d4"></i>视野内</span>
+        <span><i style="background:#e0a400"></i>出口</span>
+        <span><i style="background:#a78bfa"></i>情报碎片</span>
+        <span><b style="color:#22d3ee">◎</b><b style="color:#f472b6">◎</b>传送门（同色成对）</span>
+        <span><b style="color:#fbbf24">⚡</b>能量药水 +2</span>
+        <span><b style="color:#ef4444">▲▲▲</b>陷阱（踩中后标记）</span>
+        <span id="lgDead"><b style="color:#e5484d">✕</b>死胡同</span>
+        <span><b style="color:#e0a400">▲</b>三岔口</span>
+        <span><b style="color:#10b981">＋</b>十字口</span>
+        <span style="color:var(--ink3)">淡色 = 四周仍有迷雾，尚未确认</span>
+      </div>
+
+      <div class="hint">
+        <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / 方向键 移动 · <kbd>Shift</kbd>+方向 冲刺到尽头 · <kbd>空格</kbd> 结束回合 · 也可点击相邻格</span>
+        <span id="msg">—</span>
+      </div>
+
+      <div class="controls">
+        <button class="btn primary" id="btnEnd">结束回合</button>
+        <button class="btn" id="btnNewMap">换一张地图</button>
+        <label class="fl">玩家数
+          <select id="selPlayers">
+            <option value="1">1</option>
+            <option value="2" selected>2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+          </select>
+        </label>
+        <label class="fl">每回合步数
+          <select id="selAP">
+            <option value="3">3</option>
+            <option value="5" selected>5</option>
+            <option value="8">8</option>
+            <option value="12">12</option>
+          </select>
+        </label>
+        <label class="fl">尺寸
+          <select id="selSize">
+            <option value="11">小 23×23</option>
+            <option value="15" selected>中 31×31</option>
+            <option value="19">大 39×39</option>
+          </select>
+        </label>
+        <label class="fl">路口标记
+          <select id="selMark">
+            <option value="all" selected>全部（✕▲＋）</option>
+            <option value="branch">仅分叉（▲＋）</option>
+            <option value="none">关闭</option>
+          </select>
+        </label>
+        <button class="btn" id="btnGod">上帝视角：关</button>
+        <button class="btn" id="btnRestart">重开本图</button>
+      </div>
+    </section>
+
+    <!-- ================= 侧栏 ================= -->
+    <aside>
+      <div class="card">
+        <h2>规则（5 条）</h2>
+        <div class="body rules">
+          <ol>
+            <li><b>N 名玩家 = N 个入口</b>，从各自入口出发；地图只有 <b>1 个出口</b>，先抵达者获胜。</li>
+            <li><b>战争迷雾</b>：你只看得见自己走过的地方，视野<b>不共享</b>，每人一份独立地图记忆。</li>
+            <li><b>回合制</b>：每回合 <b id="apInRule">5</b> 点行动力，走 1 格消耗 1 点，撞墙不得通行；用完或按空格换人。</li>
+            <li><b>L1 地形层</b>：进入格子即点亮该格与视线所及的走廊，已探明区域永久留在你的图上。</li>
+            <li><b>L2 情报层</b>：踩到碎片解锁一条<b>只属于你</b>的情报（出口象限 / 远程开图 / 对手踪迹），不共享。</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>信息层级</h2>
+        <div class="body layers">
+          <div class="layer">
+            <div class="lh"><span>L0 · 公共层</span><span class="tag pub">全员可见</span></div>
+            <p>地图尺寸、入口数量与位置、回合数、各玩家的步数统计。</p>
+          </div>
+          <div class="layer">
+            <div class="lh"><span>L1 · 地形层</span><span class="tag priv">私有</span></div>
+            <p>墙与通路。只在你亲自走过、或被侦察情报点亮后才写入你的地图。已确认的路口标出 ✕ 死胡同、▲ 三岔、＋ 十字；四周仍有迷雾时标记变淡，表示尚未确认。</p>
+          </div>
+          <div class="layer">
+            <div class="lh"><span>L2 · 情报层</span><span class="tag priv">私有</span></div>
+            <p>碎片解锁的推论性情报，写入你的情报面板，其他玩家看不到、也拿不走已被你拿走的。</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>场上道具</h2>
+        <div class="body layers">
+          <div class="layer">
+            <div class="lh"><span>🌀 传送门 × 2 对</span><span class="tag priv">L1 常驻</span></div>
+            <p>同色成对，踏入即瞬移到另一端（只耗本步 1 点行动力）。探明后永久留在你的地图上，离开视野会变淡。</p>
+          </div>
+          <div class="layer">
+            <div class="lh"><span>⚡ 能量药水</span><span class="tag priv">消耗品</span></div>
+            <p>拾取立即 +2 点行动力，可超出每回合上限。仅视野内可见，每个玩家各能拾取一次。</p>
+          </div>
+          <div class="layer">
+            <div class="lh"><span>🪤 陷阱</span><span class="tag priv">隐藏</span></div>
+            <p>藏在迷雾里不显示；踩中额外消耗 1 点行动力，同时被标记在你的地图上，之后不再伤害你（对手仍可能踩中）。</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>玩家 <span class="mini" id="roundTxt"></span></h2>
+        <div class="body plist" id="plist"></div>
+      </div>
+
+      <div class="card">
+        <h2>情报面板 <span class="mini" id="intelOwner"></span></h2>
+        <div class="body scrollbox">
+          <div class="intel" id="intel"><div class="empty">尚未解锁任何情报。</div></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="overlay" id="ov">
+  <div class="win">
+    <h3 id="winTitle">—</h3>
+    <p id="winSub">—</p>
+    <table id="winTable"></table>
+    <div style="margin-top:16px"><button class="btn primary" id="btnAgain">再来一局</button></div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   迷雾迷宫 FOG MAZE — 单文件试运行版
+   ========================================================= */
+let CELLS_W = 15, CELLS_H = 15;         // 逻辑房间数 → 网格 (2W+1) x (2H+1)
+let AP_PER_TURN = 5;                    // 每回合行动力（可在界面调整：3 / 5 / 8 / 12）
+const SIGHT = 5;                        // 直线视野最远格数
+const COLORS = ['#e5484d', '#3b82f6', '#10b981', '#f59e0b'];
+const NAMES  = ['红队', '蓝队', '绿队', '橙队'];
+const DIRS = [[0,-1],[1,0],[0,1],[-1,0]];
+const PORTAL_PAIRS = 2;                          // 传送门对数
+const PORTAL_COLORS = ['#22d3ee', '#f472b6'];    // 每对传送门的颜色
+const POTION_AP = 2;                             // 能量药水 +AP
+const TRAP_COST = 1;                             // 陷阱额外消耗 AP
+
+/* ---------- 随机 ---------- */
+function mulberry32(a){
+  return function(){
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+/* ---------- 迷宫生成（DFS + 编织成环） ---------- */
+function genMaze(W, H, rng){
+  const cols = W*2+1, rows = H*2+1;
+  const g = new Uint8Array(cols*rows).fill(1);
+  const idx = (x,y) => y*cols + x;
+  const seen = new Uint8Array(W*H);
+  const stack = [[0,0]]; seen[0] = 1; g[idx(1,1)] = 0;
+  while(stack.length){
+    const [cx,cy] = stack[stack.length-1];
+    const opts = [];
+    for(const [dx,dy] of DIRS){
+      const nx = cx+dx, ny = cy+dy;
+      if(nx>=0 && nx<W && ny>=0 && ny<H && !seen[ny*W+nx]) opts.push([nx,ny,dx,dy]);
+    }
+    if(!opts.length){ stack.pop(); continue; }
+    const [nx,ny,dx,dy] = opts[(rng()*opts.length)|0];
+    seen[ny*W+nx] = 1;
+    g[idx(2*cx+1+dx, 2*cy+1+dy)] = 0;
+    g[idx(2*nx+1, 2*ny+1)] = 0;
+    stack.push([nx,ny]);
+  }
+  // 编织：打通部分死胡同，制造环路，避免全是死路
+  for(let cy=0; cy<H; cy++) for(let cx=0; cx<W; cx++){
+    const px = 2*cx+1, py = 2*cy+1;
+    let open = 0;
+    for(const [dx,dy] of DIRS) if(g[idx(px+dx, py+dy)] === 0) open++;
+    if(open === 1 && rng() < 0.38){
+      const cand = DIRS.filter(([dx,dy]) => {
+        const wx = px+dx, wy = py+dy, tx = px+dx*2, ty = py+dy*2;
+        return g[idx(wx,wy)] === 1 && tx>0 && tx<cols-1 && ty>0 && ty<rows-1;
+      });
+      if(cand.length){ const d = cand[(rng()*cand.length)|0]; g[idx(px+d[0], py+d[1])] = 0; }
+    }
+  }
+  return { cols, rows, g };
+}
+
+/* ---------- BFS 距离场 ---------- */
+function bfsField(M, start){
+  const dist = new Int32Array(M.cols*M.rows).fill(-1);
+  const q = [start]; dist[start] = 0;
+  for(let h=0; h<q.length; h++){
+    const cur = q[h], cx = cur % M.cols, cy = (cur / M.cols) | 0;
+    for(const [dx,dy] of DIRS){
+      const nx = cx+dx, ny = cy+dy;
+      if(nx<0||nx>=M.cols||ny<0||ny>=M.rows) continue;
+      const ni = ny*M.cols+nx;
+      if(M.g[ni] === 1 || dist[ni] !== -1) continue;
+      dist[ni] = dist[cur]+1; q.push(ni);
+    }
+  }
+  return dist;
+}
+
+/* ---------- 建局 ---------- */
+function buildGame(playerCount, seed){
+  const rng = mulberry32(seed);
+  const M = genMaze(CELLS_W, CELLS_H, rng);
+  const idx = (x,y) => y*M.cols + x;
+
+  // 1) 入口：边界房间，贪心最远点采样，尽量彼此分散
+  const border = [];
+  for(let cy=0; cy<CELLS_H; cy++) for(let cx=0; cx<CELLS_W; cx++){
+    if(cx===0 || cy===0 || cx===CELLS_W-1 || cy===CELLS_H-1) border.push(idx(2*cx+1, 2*cy+1));
+  }
+  const entrances = [border[(rng()*border.length)|0]];
+  while(entrances.length < playerCount){
+    const f = bfsField(M, entrances[entrances.length-1]);
+    let best = null, bd = -1;
+    for(const b of border){
+      if(entrances.includes(b)) continue;
+      const d = Math.min(...entrances.map(e => f[e])); // 与已选入口的近似距离
+      const dd = f[b];
+      if(dd > bd){ bd = dd; best = b; }
+    }
+    if(best === null) break;
+    entrances.push(best);
+  }
+
+  // 2) 出口：到各入口距离尽量都远、且彼此接近（公平）；找不到就逐步放宽
+  const fields = entrances.map(e => bfsField(M, e));
+  const req0 = Math.max(4, Math.floor((CELLS_W + CELLS_H) / 4));
+  let exit = -1;
+  for(let pass=0; pass<4 && exit<0; pass++){
+    const req = Math.max(0, req0 - pass*3);
+    let bestScore = -1e9;
+    for(let i=0; i<M.g.length; i++){
+      if(M.g[i] === 1) continue;
+      const ds = fields.map(f => f[i]);
+      if(ds.some(d => d < 0)) continue;
+      const mn = Math.min(...ds), mx = Math.max(...ds);
+      if(mn < req) continue;                     // 别太靠近任何入口
+      const score = mn - 0.55*(mx-mn);           // 远 + 均衡
+      if(score > bestScore){ bestScore = score; exit = i; }
+    }
+  }
+  if(exit < 0) exit = entrances[0];
+
+  // 3) 情报碎片：远离入口与出口，彼此不挨着
+  const nearEnt = new Set();
+  entrances.forEach(e => { for(let k=-2;k<=2;k++) for(let j=-2;j<=2;j++){
+    const x = e%M.cols + j, y = ((e/M.cols)|0) + k;
+    if(x>=0&&x<M.cols&&y>=0&&y<M.rows) nearEnt.add(y*M.cols+x);
+  }});
+  const pool = [];
+  for(let i=0;i<M.g.length;i++){
+    if(M.g[i] === 1 || i === exit || entrances.includes(i) || nearEnt.has(i)) continue;
+    const x = i%M.cols, y = (i/M.cols)|0;
+    if(Math.abs(x - exit%M.cols) + Math.abs(y - ((exit/M.cols)|0)) < 4) continue;
+    pool.push(i);
+  }
+  for(let i=pool.length-1;i>0;i--){ const j = (rng()*(i+1))|0; [pool[i],pool[j]] = [pool[j],pool[i]]; }
+  const fragTarget = Math.max(4, Math.round(CELLS_W*CELLS_H/28));
+  const types = ['compass','scout','tracks'];
+  const fragments = [];
+  for(const p of pool){
+    if(fragments.length >= fragTarget) break;
+    const x = p%M.cols, y = (p/M.cols)|0;
+    if(fragments.some(f => Math.abs(f.x-x) + Math.abs(f.y-y) < 4)) continue;
+    fragments.push({ x, y, type: types[fragments.length % types.length], taken: {} });
+  }
+
+  // 4) 道具：传送门（同色成对，两端远离）/ 能量药水 / 陷阱；彼此及与出入口、碎片均不重叠
+  const manh = (a, b) => Math.abs(a%M.cols - b%M.cols) + Math.abs(((a/M.cols)|0) - ((b/M.cols)|0));
+  const occupied = new Set([exit, ...entrances]);
+  fragments.forEach(f => occupied.add(f.y*M.cols + f.x));
+  const freeCells = pool.filter(i => !occupied.has(i));
+
+  const portals = [];
+  const minSpan = Math.floor((M.cols + M.rows) / 3);   // 配对两端的最小曼哈顿距离
+  for(let pr=0; pr<PORTAL_PAIRS; pr++){
+    let a = -1;
+    for(const i of freeCells){
+      if(occupied.has(i)) continue;
+      if(portals.every(pt => manh(i, pt.idx) >= 6)){ a = i; break; }
+    }
+    if(a < 0) break;
+    let b = -1, bd = -1;
+    for(const i of freeCells){
+      if(occupied.has(i) || i === a) continue;
+      if(portals.some(pt => manh(i, pt.idx) < 6)) continue;
+      const d = manh(i, a);
+      if(d >= minSpan && d > bd){ bd = d; b = i; }
+    }
+    if(b < 0) break;
+    occupied.add(a); occupied.add(b);
+    portals.push({ idx:a, x:a%M.cols, y:(a/M.cols)|0, id:pr*2,   pair:pr });
+    portals.push({ idx:b, x:b%M.cols, y:(b/M.cols)|0, id:pr*2+1, pair:pr });
+  }
+
+  const potions = [];
+  const potTarget = Math.max(2, Math.round(CELLS_W*CELLS_H/60));
+  for(const i of freeCells){
+    if(potions.length >= potTarget) break;
+    if(occupied.has(i)) continue;
+    if(potions.some(q => manh(i, q.idx) < 5)) continue;
+    occupied.add(i);
+    potions.push({ idx:i, x:i%M.cols, y:(i/M.cols)|0, taken:{} });
+  }
+
+  const traps = [];
+  const trapTarget = Math.max(2, Math.round(CELLS_W*CELLS_H/55));
+  for(const i of freeCells){
+    if(traps.length >= trapTarget) break;
+    if(occupied.has(i)) continue;
+    if(traps.some(q => manh(i, q.idx) < 4)) continue;
+    occupied.add(i);
+    traps.push({ idx:i, x:i%M.cols, y:(i/M.cols)|0, sprung:{} });
+  }
+
+  // 5) 玩家
+  const players = [];
+  for(let i=0;i<playerCount;i++){
+    const e = entrances[i];
+    players.push({
+      id: i, name: NAMES[i], color: COLORS[i],
+      x: e % M.cols, y: (e / M.cols) | 0,
+      ap: AP_PER_TURN, steps: 0,
+      known: new Uint8Array(M.cols*M.rows),   // 0未知 1已探明
+      visible: new Uint8Array(M.cols*M.rows), // 当前视野
+      seenAt: new Float32Array(M.cols*M.rows).fill(-1), // 首次探明时间戳（渐显动画用）
+      intel: [], ai: false, done: false, acted: false,
+      startIdx: e
+    });
+  }
+
+  const st = {
+    M, seed, entrances, exit, fragments, players,
+    portals, potions, traps,
+    cur: 0, round: 1, over: false, winner: null,
+    intelSeq: 0
+  };
+  players.forEach(p => refreshSight(st, p));
+  return st;
+}
+
+function now(){ return (typeof performance !== 'undefined' ? performance.now() : Date.now()); }
+
+/* 把某格记入玩家地图；首次探明时盖时间戳 */
+function reveal(p, i){
+  if(p.known[i] !== 1){ p.known[i] = 1; p.seenAt[i] = now(); }
+}
+
+/* ---------- 视野（射线到墙为止，最远 SIGHT） ---------- */
+function refreshSight(st, p){
+  const {M} = st;
+  p.visible.fill(0);
+  const mark = (x,y) => {
+    if(x<0||x>=M.cols||y<0||y>=M.rows) return;
+    const i = y*M.cols+x; p.visible[i] = 1; reveal(p, i);
+  };
+  mark(p.x, p.y);
+  for(const [dx,dy] of DIRS){
+    for(let k=1;k<=SIGHT;k++){
+      const nx = p.x+dx*k, ny = p.y+dy*k;
+      if(nx<0||nx>=M.cols||ny<0||ny>=M.rows) break;
+      if(M.g[ny*M.cols+nx] === 1){ mark(nx,ny); break; }   // 看得见挡路的墙
+      mark(nx,ny);
+    }
+  }
+}
+
+/* ---------- 情报 ---------- */
+function quadrantName(st, x, y){
+  const cx = st.M.cols/2, cy = st.M.rows/2;
+  const ns = y < cy ? '北' : (y > cy ? '南' : '中');
+  const ew = x < cx ? '西' : (x > cx ? '东' : '中');
+  return ns + ew;
+}
+function pickUp(st, p, f){
+  if(f.taken[p.id]) return null;
+  f.taken[p.id] = true;
+  const ex = st.exit % st.M.cols, ey = (st.exit / st.M.cols) | 0;
+  let rec;
+  if(f.type === 'compass'){
+    const q = quadrantName(st, ex, ey);
+    rec = { k: '罗盘碎片', v: '出口位于地图的【' + q + '】象限（已永久标记在你的地图上）', q };
+  } else if(f.type === 'scout'){
+    const R = 3; let n = 0;
+    for(let dy=-R; dy<=R; dy++) for(let dx=-R; dx<=R; dx++){
+      const nx = f.x+dx, ny = f.y+dy;
+      if(nx<0||nx>=st.M.cols||ny<0||ny>=st.M.rows) continue;
+      if(p.known[ny*st.M.cols+nx]) continue;
+      reveal(p, ny*st.M.cols+nx); n++;
+    }
+    rec = { k: '侦察碎片', v: `以 (${f.x},${f.y}) 为中心 7×7 区域远程点亮，新增 ${n} 格地形` };
+  } else {
+    const others = st.players.filter(o => o.id !== p.id && !o.done);
+    if(!others.length) rec = { k: '踪迹碎片', v: '没有其他对手可追踪（情报作废）' };
+    else {
+      const txt = others.map(o => `${o.name}在 (${o.x},${o.y})`).join('，');
+      rec = { k: '踪迹碎片', v: `第 ${st.round} 回合快照：${txt}（本回合内无视迷雾可见）`, trackUntil: st.round, track: others.map(o=>({id:o.id})) };
+    }
+  }
+  rec.seq = ++st.intelSeq;
+  rec.at = `R${st.round}`;
+  p.intel.push(rec);
+  return rec;
+}
+
+/* ---------- 移动 ---------- */
+/* 走一格：返回 'moved' | 'item' | 'frag' | 'portal' | 'wall' | 'edge' */
+function step(st, dx, dy){
+  const p = st.players[st.cur];
+  const nx = p.x+dx, ny = p.y+dy;
+  if(nx<0||nx>=st.M.cols||ny<0||ny>=st.M.rows) return 'edge';
+  if(st.M.g[ny*st.M.cols+nx] === 1){
+    reveal(p, ny*st.M.cols+nx);                   // 撞一次墙也算探明该格是墙
+    return 'wall';
+  }
+  p.x = nx; p.y = ny; p.ap--; p.steps++;
+  refreshSight(st, p);
+
+  let res = 'moved';
+
+  // 情报碎片
+  const fi = st.fragments.findIndex(f => f.x === nx && f.y === ny);
+  if(fi >= 0){
+    const rec = pickUp(st, p, st.fragments[fi]);
+    if(rec){ toast(`🔮 ${rec.k}：${rec.v}`); burst(nx, ny, '#a78bfa', 16, 1.1, 1.1); res = 'frag'; }
+  }
+
+  // 能量药水：立即 +POTION_AP 行动力（可超出每回合上限）
+  const po = st.potions.find(q => q.x === nx && q.y === ny);
+  if(po && !po.taken[p.id]){
+    po.taken[p.id] = true;
+    p.ap += POTION_AP;
+    toast(`⚡ 能量药水：行动力 +${POTION_AP}`);
+    burst(nx, ny, '#fbbf24', 12, 1.0, 1.2);
+    if(res === 'moved') res = 'item';
+  }
+
+  // 陷阱：首次踩中额外消耗 TRAP_COST 点行动力，此后标记在你的地图上、不再伤害你
+  const tr = st.traps.find(q => q.x === nx && q.y === ny);
+  if(tr && !tr.sprung[p.id]){
+    tr.sprung[p.id] = true;
+    p.ap = Math.max(0, p.ap - TRAP_COST);
+    toast(`🪤 触发陷阱！额外消耗 ${TRAP_COST} 点行动力（已标记在你的地图上）`);
+    burst(nx, ny, '#ef4444', 12, 1.0, 0.8);
+    if(res === 'moved') res = 'item';
+  }
+
+  // 传送门：瞬移到配对端（只耗本步的 1 点），落点刷新视野
+  const ptl = st.portals.find(q => q.x === nx && q.y === ny);
+  if(ptl){
+    const dest = st.portals.find(q => q.id === (ptl.id ^ 1));
+    if(dest){
+      const c = PORTAL_COLORS[ptl.pair % PORTAL_COLORS.length];
+      burst(nx, ny, c, 14, 1.2, 1.0);
+      p.x = dest.x; p.y = dest.y;
+      if(p.dx !== undefined){ p.dx = dest.x; p.dy = dest.y; }   // 瞬移不做长距离滑行
+      refreshSight(st, p);
+      burst(dest.x, dest.y, c, 18, 1.4, 1.2);
+      toast(`🌀 传送门：瞬移至 (${dest.x},${dest.y})`);
+      res = 'portal';
+    }
+  }
+
+  if(p.y*st.M.cols+p.x === st.exit){
+    st.over = true; st.winner = p.id; p.done = true;
+    showWin(st);
+  }
+  return res;
+}
+
+function tryMove(st, dx, dy){
+  if(st.over) return;
+  const p = st.players[st.cur];
+  if(p.done){ endTurn(st); return; }
+  if(p.ap <= 0){ toast('行动力已用尽，按空格结束回合'); return; }
+  const r = step(st, dx, dy);
+  if(r === 'edge') msg('那是地图边缘。');
+  else if(r === 'wall') msg('前方是墙，无法通行（不消耗行动力）。');
+  else if(!st.over){
+    if(p.ap <= 0){
+      msg('行动力用尽，自动结束回合。');
+      if(!p.ai) setTimeout(() => { if(!st.over) endTurn(st); }, 320);
+    } else msg(`移动至 (${p.x},${p.y})`);
+  }
+  render(st);
+}
+
+/* 冲刺：沿一个方向连续前进，直到撞墙 / 踩到碎片 / 抵达出口 / 用完行动力 */
+function dash(st, dx, dy){
+  if(st.over) return;
+  const p = st.players[st.cur];
+  if(p.done){ endTurn(st); return; }
+  if(p.ap <= 0){ toast('行动力已用尽，按空格结束回合'); return; }
+  let n = 0, blocked = false;
+  while(p.ap > 0 && !st.over){
+    const r = step(st, dx, dy);
+    if(r === 'moved' || r === 'item'){ n++; continue; }
+    if(r === 'frag'){ n++; msg(`冲刺 ${n} 格后踩到情报碎片，自动停下。`); break; }
+    if(r === 'portal'){ n++; msg(`冲刺 ${n} 格后冲进传送门，瞬移停下。`); break; }
+    blocked = true; break;
+  }
+  if(n === 0 && blocked) msg('前方是墙，无法通行（不消耗行动力）。');
+  else if(n > 0 && !st.over){
+    if(p.ap <= 0){
+      msg(`冲刺 ${n} 格，行动力用尽。`);
+      if(!p.ai) setTimeout(() => { if(!st.over) endTurn(st); }, 320);
+    } else msg(`冲刺 ${n} 格，停在 (${p.x},${p.y})`);
+  }
+  render(st);
+}
+
+function endTurn(st){
+  if(st.over) return;
+  st.players[st.cur].ap = 0;
+  st.players[st.cur].acted = true;
+
+  // 找下一位尚未抵达出口的玩家
+  let n = -1;
+  for(let i=1;i<=st.players.length;i++){
+    const c = (st.cur + i) % st.players.length;
+    if(!st.players[c].done){ n = c; break; }
+  }
+  if(n < 0) return;
+
+  // 所有在场玩家都行动过 → 进入下一回合
+  if(st.players.every(q => q.done || q.acted)){
+    st.round++;
+    st.players.forEach(q => q.acted = false);
+  }
+  st.cur = n;
+  st.players.forEach(q => { if(!q.done) q.ap = AP_PER_TURN; });
+
+  refreshSight(st, st.players[n]);
+  msg(`${st.players[n].name} 的回合`);
+  render(st);
+  if(st.players[n].ai) setTimeout(() => aiStep(st), 320);
+}
+
+/* ---------- AI 托管（只使用自己的已知信息） ---------- */
+function aiStep(st){
+  if(st.over) return;
+  const p = st.players[st.cur];
+  if(!p.ai || p.ap <= 0 || p.done){ render(st); return; }
+  const dir = aiChoose(st, p);
+  if(!dir){ endTurn(st); return; }
+  tryMove(st, dir[0], dir[1]);
+  if(!st.over && st.players[st.cur] === p && p.ap > 0) setTimeout(() => aiStep(st), 200);
+  else if(!st.over && p.ap <= 0) setTimeout(() => { if(!st.over) endTurn(st); }, 260);
+}
+
+function aiChoose(st, p){
+  const {M} = st, N = M.cols*M.rows;
+  const prev = new Int32Array(N).fill(-2);
+  const start = p.y*M.cols + p.x;
+  prev[start] = -1;
+  const q = [start];
+  let goal = -1;
+  const exitKnown = p.known[st.exit] === 1;
+  for(let h=0; h<q.length; h++){
+    const cur = q[h];
+    if(exitKnown && cur === st.exit){ goal = cur; break; }
+    if(!exitKnown && cur !== start && isFrontier(st, p, cur)){ goal = cur; break; }
+    const cx = cur % M.cols, cy = (cur/M.cols)|0;
+    for(const [dx,dy] of DIRS){
+      const nx = cx+dx, ny = cy+dy;
+      if(nx<0||nx>=M.cols||ny<0||ny>=M.rows) continue;
+      const ni = ny*M.cols+nx;
+      if(M.g[ni] === 1 || prev[ni] !== -2) continue;
+      if(p.known[ni] !== 1 && ni !== st.exit) continue;   // 只走自己探明过的路
+      prev[ni] = cur; q.push(ni);
+    }
+  }
+  if(goal < 0){
+    // 站在已探明的边界上：随机朝未探明的方向试探（撞墙不消耗行动力，且会把该墙记入地图）
+    const un = DIRS.filter(([dx,dy]) => {
+      const nx = p.x+dx, ny = p.y+dy;
+      if(nx<0||nx>=M.cols||ny<0||ny>=M.rows) return false;
+      return p.known[ny*M.cols+nx] !== 1;
+    });
+    const roads = DIRS.filter(([dx,dy]) => {
+      const nx = p.x+dx, ny = p.y+dy;
+      if(nx<0||nx>=M.cols||ny<0||ny>=M.rows) return false;
+      const ni = ny*M.cols+nx;
+      return p.known[ni] === 1 && M.g[ni] === 0;
+    });
+    const pool = un.length ? un : roads;
+    if(!pool.length) return null;
+    return pool[(Math.random()*pool.length)|0];
+  }
+  let cur = goal;
+  while(prev[cur] !== start && prev[cur] !== -1) cur = prev[cur];
+  if(prev[cur] === -1) return null;
+  const cx = cur % M.cols, cy = (cur/M.cols)|0;
+  return [cx - p.x, cy - p.y];
+}
+function isFrontier(st, p, i){
+  if(p.known[i] !== 1) return false;
+  const {M} = st, x = i % M.cols, y = (i/M.cols)|0;
+  for(const [dx,dy] of DIRS){
+    const nx = x+dx, ny = y+dy;
+    if(nx<0||nx>=M.cols||ny<0||ny>=M.rows) continue;
+    if(p.known[ny*M.cols+nx] !== 1) return true;
+  }
+  return false;
+}
+
+/* ---------- 渲染 ---------- */
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+let CELL = 20;
+let MARK_MODE = 'all';                  // all=全部 / branch=仅分叉 / none=关闭
+
+/* 调色板 */
+const COL = {
+  fog: '#0c0f16',
+  wallV: '#59516a', wallVHi: '#746c86', wallVLo: '#433c50',
+  wallK: '#2c2735', wallKHi: '#3a3344', wallKLo: '#211d2a',
+  floorV: '#eae3d4', floorV2: '#e3dac6',
+  floorK: '#6e6873', floorK2: '#655f6b',
+};
+
+function hexA(hex, a){
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+/* 动画状态：显示位置平滑插值 + 粒子 */
+let particles = [];
+let rafId = null;
+
+function startLoop(){
+  if(rafId !== null) return;
+  const tick = () => {
+    if(ST){ updateAnim(ST); render(ST); }
+    rafId = requestAnimationFrame(tick);
+  };
+  rafId = requestAnimationFrame(tick);
+}
+function stopLoop(){
+  if(rafId !== null){ cancelAnimationFrame(rafId); rafId = null; }
+}
+
+function updateAnim(st){
+  for(const q of st.players){
+    if(q.dx === undefined){ q.dx = q.x; q.dy = q.y; continue; }
+    q.dx += (q.x - q.dx) * 0.24;
+    q.dy += (q.y - q.dy) * 0.24;
+    if(Math.abs(q.x - q.dx) < 0.015) q.dx = q.x;
+    if(Math.abs(q.y - q.dy) < 0.015) q.dy = q.y;
+  }
+  particles = particles.filter(pt => {
+    pt.x += pt.vx; pt.y += pt.vy; pt.vy += 0.07; pt.life -= 0.022;
+    return pt.life > 0;
+  });
+}
+
+function burst(gx, gy, color, n, spread, lift){
+  for(let i=0;i<n;i++){
+    const a = Math.random()*Math.PI*2;
+    const sp = (0.5 + Math.random()*1.7)*(spread || 1);
+    particles.push({
+      x: (gx+.5)*CELL, y: (gy+.5)*CELL,
+      vx: Math.cos(a)*sp, vy: Math.sin(a)*sp - (lift || 0.9),
+      life: 1, color, size: 1.6 + Math.random()*2.4
+    });
+  }
+}
+
+/* 某个出口数的路口是否要画标记（走廊 open=2 永不标记） */
+function shouldMark(open){
+  if(MARK_MODE === 'none') return false;
+  if(MARK_MODE === 'branch') return open >= 3;   // 去掉死胡同 ✕
+  return open === 1 || open >= 3;
+}
+
+/* 统计某格四周：open = 已探明的通路邻居数，unk = 仍是迷雾的邻居数（边界外算墙） */
+function junctionInfo(st, kOf, x, y){
+  const {M} = st;
+  let open = 0, unk = 0;
+  for(const [dx,dy] of DIRS){
+    const nx = x+dx, ny = y+dy;
+    if(nx<0||nx>=M.cols||ny<0||ny>=M.rows) continue;   // 地图边界视为墙
+    if(kOf(ny*M.cols+nx) !== 1){ unk++; continue; }
+    if(M.g[ny*M.cols+nx] === 0) open++;
+  }
+  return { open, unk };
+}
+
+/* 路口标记：✕ 死胡同 / ▲ 三岔 / ＋ 十字；unk>0 时减淡表示未确认 */
+function drawJunction(cx0, cy0, open, unk, small){
+  const off = small ? CELL*0.30 : 0;
+  const px = cx0 + off, py = cy0 + off;
+  const s = (small ? 0.58 : 1) * CELL;
+  ctx.save();
+  ctx.globalAlpha = unk > 0 ? 0.40 : 1;
+  if(open === 1){
+    ctx.strokeStyle = '#e5484d';
+    ctx.lineWidth = Math.max(1.4, s*0.13); ctx.lineCap = 'round';
+    const r = s*0.19;
+    ctx.beginPath();
+    ctx.moveTo(px-r,py-r); ctx.lineTo(px+r,py+r);
+    ctx.moveTo(px+r,py-r); ctx.lineTo(px-r,py+r);
+    ctx.stroke();
+  } else if(open === 3){
+    ctx.fillStyle = '#e0a400';
+    const r = s*0.20;
+    ctx.beginPath();
+    ctx.moveTo(px, py-r*1.3); ctx.lineTo(px+r, py+r*0.75); ctx.lineTo(px-r, py+r*0.75);
+    ctx.closePath(); ctx.fill();
+  } else if(open === 4){
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = Math.max(1.4, s*0.12); ctx.lineCap = 'round';
+    const r = s*0.19;
+    ctx.beginPath();
+    ctx.moveTo(px-r,py); ctx.lineTo(px+r,py);
+    ctx.moveTo(px,py-r); ctx.lineTo(px,py+r);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function typeName(info){
+  if(info.open === 1) return '死胡同';
+  if(info.open === 2) return '走廊';
+  if(info.open === 3) return '三岔路口';
+  if(info.open === 4) return '十字路口';
+  return '四周全是墙';
+}
+
+function fitCanvas(st){
+  const cssW = cv.parentElement.clientWidth - 28;
+  const size = Math.max(320, Math.min(640, cssW));
+  CELL = Math.floor(size / st.M.cols);
+  const px = CELL * st.M.cols;
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = px*dpr; cv.height = px*dpr;
+  cv.style.width = px+'px'; cv.style.height = px+'px';
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+
+function render(st){
+  const {M} = st, p = st.players[st.cur];
+  const kOf = i => GOD ? 1 : p.known[i];         // 上帝视角：无视迷雾（调试/讲解用）
+  const vOf = i => GOD ? 1 : p.visible[i];
+  const px = CELL * M.cols;
+  const t = now();
+  const pd = { x: p.dx === undefined ? p.x : p.dx, y: p.dy === undefined ? p.y : p.dy };
+  const pcx = (pd.x+.5)*CELL, pcy = (pd.y+.5)*CELL;
+
+  ctx.clearRect(0,0,px,px);
+  ctx.fillStyle = COL.fog; ctx.fillRect(0,0,px,px);
+
+  // 地形：立体砖墙 + 暖色石板；新探明的格子 300ms 渐显
+  for(let y=0;y<M.rows;y++) for(let x=0;x<M.cols;x++){
+    const i = y*M.cols+x;
+    if(kOf(i) !== 1) continue;
+    const vis = vOf(i) === 1;
+    const gx = x*CELL, gy = y*CELL;
+    const seen = p.seenAt[i];
+    const a = GOD || seen < 0 ? 1 : Math.min(1, (t - seen) / 300);
+    ctx.save();
+    if(a < 1) ctx.globalAlpha = 0.2 + 0.8*a;
+    if(M.g[i] === 1){
+      ctx.fillStyle = vis ? COL.wallV : COL.wallK;
+      ctx.fillRect(gx, gy, CELL, CELL);
+      ctx.fillStyle = vis ? COL.wallVHi : COL.wallKHi;
+      ctx.fillRect(gx, gy, CELL, Math.max(1, CELL*0.14));
+      ctx.fillStyle = vis ? COL.wallVLo : COL.wallKLo;
+      ctx.fillRect(gx, gy+CELL-Math.max(1,CELL*0.18), CELL, Math.max(1,CELL*0.18));
+    } else {
+      const alt = (x + y) % 2 === 0;
+      ctx.fillStyle = vis ? (alt ? COL.floorV : COL.floorV2) : (alt ? COL.floorK : COL.floorK2);
+      ctx.fillRect(gx, gy, CELL, CELL);
+    }
+    ctx.restore();
+  }
+
+  // 光照蒙版：以玩家为中心的一圈柔光，只作用于地形层，远处自然压暗
+  if(!GOD){
+    const g = ctx.createRadialGradient(pcx,pcy, CELL*2.2, pcx,pcy, CELL*8.5);
+    g.addColorStop(0, 'rgba(7,10,16,0)');
+    g.addColorStop(0.55, 'rgba(7,10,16,.16)');
+    g.addColorStop(1, 'rgba(7,10,16,.62)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,px,px);
+  }
+
+  // 网格细线
+  ctx.strokeStyle = 'rgba(255,255,255,.05)'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  for(let y=0;y<=M.rows;y++){ ctx.moveTo(0,y*CELL); ctx.lineTo(px,y*CELL); }
+  for(let x=0;x<=M.cols;x++){ ctx.moveTo(x*CELL,0); ctx.lineTo(x*CELL,px); }
+  ctx.stroke();
+
+  // 罗盘情报 → 象限框（轻微呼吸）
+  const comp = p.intel.find(i => i.q);
+  if(comp){
+    const cw = M.cols/3, ch = M.rows/3;
+    const qx = (st.exit % M.cols < cw*2 ? (st.exit % M.cols < cw ? 0 : 1) : 2);
+    const qy = ((st.exit/M.cols)|0) < ch*2 ? (((st.exit/M.cols)|0) < ch ? 0 : 1) : 2;
+    ctx.save();
+    ctx.strokeStyle = `rgba(224,164,0,${0.55 + Math.sin(t/500)*0.2})`;
+    ctx.lineWidth = 2; ctx.setLineDash([6,4]);
+    ctx.strokeRect(qx*cw*CELL+2, qy*ch*CELL+2, cw*CELL-4, ch*CELL-4);
+    ctx.restore();
+  }
+
+  // 路口标记：只标已探明的通路格；玩家脚下那格交给侧栏文字，避免被棋子盖住
+  if(MARK_MODE !== 'none'){
+    const curIdx = p.y*M.cols + p.x;
+    for(let y=0;y<M.rows;y++) for(let x=0;x<M.cols;x++){
+      const i = y*M.cols+x;
+      if(kOf(i) !== 1 || M.g[i] === 1) continue;
+      if(i === st.exit || i === curIdx) continue;
+      if(st.portals.some(pt => pt.idx === i)) continue;      // 传送门格有专属图标
+      const info = junctionInfo(st, kOf, x, y);
+      if(!shouldMark(info.open)) continue;
+      const small = st.fragments.some(f => f.x === x && f.y === y && vOf(f.y*M.cols+f.x) === 1);
+      drawJunction(x*CELL+CELL/2, y*CELL+CELL/2, info.open, info.unk, small);
+    }
+  }
+
+  // 入口（L0 公共层，始终可见）：虚线环缓慢旋转
+  st.entrances.forEach((e, k) => {
+    const x = e % M.cols, y = (e/M.cols)|0;
+    const cx0 = x*CELL + CELL/2, cy0 = y*CELL + CELL/2;
+    const cc = COLORS[k % COLORS.length];
+    ctx.save();
+    ctx.strokeStyle = cc; ctx.lineWidth = 2;
+    ctx.setLineDash([4,3]); ctx.lineDashOffset = -((t/50 + k*11) % 100);
+    ctx.beginPath(); ctx.arc(cx0, cy0, CELL*0.38, 0, Math.PI*2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = cc; ctx.globalAlpha = .2;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#fff'; ctx.font = `700 ${Math.max(9,CELL*0.5)}px sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(String(k+1), cx0, cy0+0.5);
+    ctx.restore();
+  });
+
+  // 出口（被探明后才显示）：光晕 + 双脉冲环
+  if(kOf(st.exit) === 1){
+    const x = st.exit % M.cols, y = (st.exit/M.cols)|0;
+    const cx0 = x*CELL + CELL/2, cy0 = y*CELL + CELL/2;
+    ctx.save();
+    const g = ctx.createRadialGradient(cx0,cy0,1,cx0,cy0,CELL*1.5);
+    g.addColorStop(0,'rgba(224,164,0,.9)'); g.addColorStop(1,'rgba(224,164,0,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx0,cy0,CELL*1.5,0,Math.PI*2); ctx.fill();
+    for(let ring=0; ring<2; ring++){
+      const ph = ((t/950 + ring*0.5) % 1);
+      ctx.strokeStyle = `rgba(240,182,34,${(1-ph)*0.7})`;
+      ctx.lineWidth = 1.8;
+      ctx.beginPath(); ctx.arc(cx0, cy0, CELL*0.42 + ph*CELL*1.1, 0, Math.PI*2); ctx.stroke();
+    }
+    ctx.fillStyle = '#f0b622';
+    ctx.beginPath(); ctx.arc(cx0,cy0,CELL*0.34,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,246,224,.9)'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = '#14171d'; ctx.font = `700 ${Math.max(9,CELL*0.44)}px sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('出', cx0, cy0+0.5);
+    ctx.restore();
+  }
+
+  // 情报碎片（仅视野内可见）：旋转 + 上下浮动 + 微光
+  st.fragments.forEach((f, fi) => {
+    const i = f.y*M.cols + f.x;
+    if(vOf(i) !== 1) return;
+    const got = f.taken[p.id];
+    const bob = Math.sin(t/380 + fi*1.7) * CELL*0.07;
+    const cx0 = f.x*CELL + CELL/2, cy0 = f.y*CELL + CELL/2 + bob;
+    ctx.save();
+    ctx.translate(cx0, cy0);
+    if(!got){
+      const g = ctx.createRadialGradient(0,0,1,0,0,CELL*0.9);
+      g.addColorStop(0,'rgba(167,139,250,.45)'); g.addColorStop(1,'rgba(167,139,250,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0,0,CELL*0.9,0,Math.PI*2); ctx.fill();
+    }
+    ctx.rotate(Math.PI/4 + (got ? 0 : t/900));
+    const s = CELL*0.24;
+    ctx.fillStyle = got ? 'rgba(167,139,250,.28)' : '#a78bfa';
+    ctx.fillRect(-s,-s,s*2,s*2);
+    if(!got){ ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 1; ctx.strokeRect(-s,-s,s*2,s*2); }
+    ctx.restore();
+  });
+
+  // 传送门（L1：探明后常驻你的地图，离开视野变淡）：旋涡双弧旋转
+  st.portals.forEach(ptl => {
+    const i = ptl.idx;
+    if(kOf(i) !== 1) return;
+    const vis = vOf(i) === 1;
+    const c = PORTAL_COLORS[ptl.pair % PORTAL_COLORS.length];
+    const cx0 = ptl.x*CELL + CELL/2, cy0 = ptl.y*CELL + CELL/2;
+    ctx.save();
+    ctx.globalAlpha = vis ? 1 : 0.45;
+    const g = ctx.createRadialGradient(cx0,cy0,1,cx0,cy0,CELL*0.85);
+    g.addColorStop(0, hexA(c, vis ? .5 : .25)); g.addColorStop(1, hexA(c, 0));
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx0,cy0,CELL*0.85,0,Math.PI*2); ctx.fill();
+    const rot = t/600 + ptl.id*1.3;
+    ctx.strokeStyle = c; ctx.lineCap = 'round';
+    for(let k2=0;k2<2;k2++){
+      ctx.lineWidth = Math.max(1.5, CELL*0.11);
+      ctx.beginPath();
+      ctx.arc(cx0, cy0, CELL*(0.30 - k2*0.09), rot + k2*2.1, rot + k2*2.1 + Math.PI*1.25);
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(cx0,cy0,Math.max(1,CELL*0.07),0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
+
+  // 能量药水（仅视野内可见）：浮动闪电
+  st.potions.forEach((po, pi) => {
+    const i = po.idx;
+    if(vOf(i) !== 1) return;
+    const got = po.taken[p.id];
+    const bob = Math.sin(t/420 + pi*2.3) * CELL*0.05;
+    const cx0 = po.x*CELL + CELL/2, cy0 = po.y*CELL + CELL/2 + bob;
+    ctx.save();
+    ctx.translate(cx0, cy0);
+    if(!got){
+      const g = ctx.createRadialGradient(0,0,1,0,0,CELL*0.7);
+      g.addColorStop(0,'rgba(251,191,36,.4)'); g.addColorStop(1,'rgba(251,191,36,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0,0,CELL*0.7,0,Math.PI*2); ctx.fill();
+    }
+    const s = CELL*0.30;
+    ctx.fillStyle = got ? 'rgba(251,191,36,.25)' : '#fbbf24';
+    ctx.beginPath();
+    ctx.moveTo(s*0.25, -s);
+    ctx.lineTo(-s*0.45, s*0.15);
+    ctx.lineTo(-s*0.02, s*0.15);
+    ctx.lineTo(-s*0.25, s);
+    ctx.lineTo(s*0.45, -s*0.15);
+    ctx.lineTo(s*0.02, -s*0.15);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  });
+
+  // 陷阱（触发后才写入你的地图；上帝视角下全部淡显）
+  st.traps.forEach(trp => {
+    if(!GOD && !trp.sprung[p.id]) return;
+    const i = trp.idx;
+    if(!GOD && kOf(i) !== 1) return;
+    const vis = vOf(i) === 1;
+    const cx0 = trp.x*CELL + CELL/2, cy0 = trp.y*CELL + CELL/2;
+    ctx.save();
+    ctx.globalAlpha = (GOD && !trp.sprung[p.id]) ? 0.35 : (vis ? 1 : 0.5);
+    const s = CELL*0.30;
+    ctx.fillStyle = '#ef4444';
+    for(let k2=-1;k2<=1;k2++){
+      ctx.beginPath();
+      ctx.moveTo(cx0 + k2*s*0.8, cy0 - s*0.7);
+      ctx.lineTo(cx0 + k2*s*0.8 + s*0.32, cy0 + s*0.5);
+      ctx.lineTo(cx0 + k2*s*0.8 - s*0.32, cy0 + s*0.5);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  });
+
+  // 其他玩家：只在你的当前视野内可见；踪迹情报可无视迷雾（当回合）
+  const trackIntel = p.intel.filter(tt => tt.trackUntil === st.round);
+  st.players.forEach(o => {
+    if(o.id === p.id) return;
+    const i = o.y*M.cols + o.x;
+    const seen = vOf(i) === 1 || (trackIntel.length && trackIntel.some(tt => tt.track.some(k => k.id === o.id)));
+    if(!seen) return;
+    const ox = (o.dx === undefined ? o.x : o.dx), oy = (o.dy === undefined ? o.y : o.dy);
+    const cx0 = (ox+.5)*CELL, cy0 = (oy+.5)*CELL;
+    ctx.save();
+    ctx.globalAlpha = vOf(i) === 1 ? 1 : .5;
+    const g = ctx.createRadialGradient(cx0,cy0,1,cx0,cy0,CELL*1.1);
+    g.addColorStop(0, hexA(o.color, .45)); g.addColorStop(1, hexA(o.color, 0));
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx0,cy0,CELL*1.1,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = o.color;
+    ctx.beginPath(); ctx.arc(cx0, cy0, CELL*0.32, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.restore();
+  });
+
+  // 自己：呼吸光晕 + 棋子
+  {
+    const breathe = 1 + Math.sin(t/420)*0.06;
+    ctx.save();
+    const g = ctx.createRadialGradient(pcx,pcy,1,pcx,pcy,CELL*1.7);
+    g.addColorStop(0, hexA(p.color, .5)); g.addColorStop(1, hexA(p.color, 0));
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(pcx,pcy,CELL*1.7*breathe,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(pcx, pcy, CELL*0.36*breathe, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.restore();
+  }
+
+  // 粒子（最上层）
+  for(const pt of particles){
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, pt.life);
+    ctx.fillStyle = pt.color;
+    ctx.beginPath(); ctx.arc(pt.x, pt.y, Math.max(0.4, pt.size*pt.life), 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  renderSide(st);
+}
+
+function renderSide(st){
+  const p = st.players[st.cur];
+  document.getElementById('turnDot').style.background = p.color;
+  document.getElementById('turnTxt').textContent = `${p.name} 行动中 · 第 ${st.round} 回合`;
+  document.getElementById('roundTxt').textContent = `第 ${st.round} 回合`;
+
+  let apHtml = '';
+  const apw = AP_PER_TURN > 8 ? 13 : 22;          // 步数多时压缩指示条，避免挤爆布局
+  for(let i=0;i<AP_PER_TURN;i++) apHtml += `<span class="ap ${i < p.ap ? 'on' : ''}" style="width:${apw}px;${i < p.ap ? 'background:'+p.color : ''}"></span>`;
+  document.getElementById('apDots').innerHTML = apHtml;
+  document.getElementById('apTxt').textContent = `行动力 ${p.ap}/${AP_PER_TURN}`;
+  const r3 = document.getElementById('apInRule'); if(r3) r3.textContent = AP_PER_TURN;
+
+  const here = junctionInfo(st, i => GOD ? 1 : p.known[i], p.x, p.y);
+  const pt = document.getElementById('posTag');
+  if(pt){
+    if(MARK_MODE === 'none'){ pt.style.display = 'none'; }
+    else {
+      pt.style.display = '';
+      pt.textContent = shouldMark(here.open)
+        ? `脚下：${typeName(here)}${here.unk > 0 ? '（未确认）' : ''}`
+        : '脚下：—';
+    }
+  }
+  const lgd = document.getElementById('lgDead');
+  if(lgd) lgd.style.display = (MARK_MODE === 'all') ? '' : 'none';
+
+  document.getElementById('plist').innerHTML = st.players.map(q => {
+    const known = q.known.reduce((a,b)=>a+b,0);
+    return `<div class="pitem ${q.id===st.cur?'active':''}">
+      <div class="r1">
+        <span class="pname"><span class="dot" style="background:${q.color}"></span>${q.name}${q.id===st.cur?' ▸':''}</span>
+        <span class="pstat">${q.done?'已抵达出口':(q.id===st.cur?`AP ${q.ap}`:'等待中')}</span>
+      </div>
+      <div class="r2">
+        <span class="mini">步数 ${q.steps} · 已探明 ${known} 格 · 情报 ${q.intel.length}</span>
+        <button class="toggle ${q.ai?'on':''}" data-ai="${q.id}">${q.ai?'AI 托管中':'AI 托管'}</button>
+      </div>
+    </div>`;
+  }).join('');
+  document.querySelectorAll('[data-ai]').forEach(b => b.onclick = () => {
+    const q = st.players[+b.dataset.ai];
+    q.ai = !q.ai; render(st);
+    if(q.ai && st.cur === q.id) setTimeout(() => aiStep(st), 260);
+  });
+
+  document.getElementById('intelOwner').textContent = `— ${p.name} 私有`;
+  const box = document.getElementById('intel');
+  box.innerHTML = p.intel.length
+    ? p.intel.slice().reverse().map(t => `<div class="it"><div class="k">${t.k} <span style="color:#8b95a6;font-weight:400">${t.at}</span></div>${t.v}</div>`).join('')
+    : `<div class="empty">尚未解锁任何情报。走进紫色菱形碎片试试。</div>`;
+
+  document.getElementById('seedTxt').textContent = st.seed;
+  document.getElementById('dimTxt').textContent = `${st.M.cols}×${st.M.rows}`;
+  document.getElementById('entTxt').textContent = st.entrances.length;
+  document.getElementById('fragTxt').textContent = st.fragments.length;
+}
+
+/* ---------- UI 辅助 ---------- */
+let toastTimer;
+function toast(t){
+  const el = document.getElementById('toast');
+  el.textContent = t; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>el.classList.remove('show'), 2600);
+}
+function msg(t){ document.getElementById('msg').textContent = t; }
+
+function showWin(st){
+  // 先在出口放金色烟花，再弹结算面板
+  const ex = st.exit % st.M.cols, ey = (st.exit / st.M.cols) | 0;
+  burst(ex, ey, '#e0a400', 70, 2.3, 1.4);
+  burst(ex, ey, '#f5d977', 36, 1.6, 1.8);
+  const w = st.players[st.winner];
+  document.getElementById('winTitle').innerHTML = `<span style="color:${w.color}">${w.name}</span> 找到了出口！`;
+  document.getElementById('winSub').textContent = `第 ${st.round} 回合 · 共走 ${w.steps} 步 · 地图种子 ${st.seed}`;
+  document.getElementById('winTable').innerHTML =
+    `<tr><th>玩家</th><th>步数</th><th>已探明</th><th>情报</th></tr>` +
+    st.players.map(q => `<tr><td><span class="dot" style="background:${q.color};display:inline-block;margin-right:6px"></span>${q.name}${q.id===st.winner?' 🏆':''}</td>
+      <td>${q.steps}</td><td>${q.known.reduce((a,b)=>a+b,0)} 格</td><td>${q.intel.length}</td></tr>`).join('');
+  setTimeout(() => document.getElementById('ov').classList.add('show'), 850);
+}
+
+/* ---------- 事件 ---------- */
+let ST = null, GOD = false;
+
+function newGame(players, seed){
+  const size = +(document.getElementById('selSize').value || 15);
+  CELLS_W = CELLS_H = size;
+  AP_PER_TURN = +(document.getElementById('selAP').value || 5);
+  ST = buildGame(players, seed === undefined ? (Math.random()*1e9)|0 : seed);
+  particles = [];
+  fitCanvas(ST);
+  msg(`${ST.players[0].name} 的回合 · 移动开始探图`);
+  render(ST);
+  startLoop();
+}
+
+document.getElementById('btnEnd').onclick = () => endTurn(ST);
+document.getElementById('btnNewMap').onclick = () => newGame(+document.getElementById('selPlayers').value);
+document.getElementById('btnRestart').onclick = () => newGame(+document.getElementById('selPlayers').value, ST.seed);
+document.getElementById('selPlayers').onchange = () => newGame(+document.getElementById('selPlayers').value);
+document.getElementById('selSize').onchange = () => newGame(+document.getElementById('selPlayers').value);
+document.getElementById('selAP').onchange = () => {
+  AP_PER_TURN = +document.getElementById('selAP').value;
+  if(!ST) return;
+  ST.players.forEach(q => { if(!q.done) q.ap = Math.min(q.ap, AP_PER_TURN); });
+  render(ST);
+};
+document.getElementById('selMark').onchange = () => {
+  MARK_MODE = document.getElementById('selMark').value;
+  if(ST) render(ST);
+};
+document.getElementById('btnGod').onclick = () => {
+  GOD = !GOD;
+  document.getElementById('btnGod').textContent = '上帝视角：' + (GOD ? '开' : '关');
+  document.getElementById('btnGod').classList.toggle('primary', GOD);
+  render(ST);
+};
+document.getElementById('btnAgain').onclick = () => {
+  document.getElementById('ov').classList.remove('show');
+  newGame(+document.getElementById('selPlayers').value);
+};
+
+window.addEventListener('keydown', e => {
+  if(!ST || ST.over) return;
+  const map = {ArrowUp:[0,-1],w:[0,-1],W:[0,-1],ArrowDown:[0,1],s:[0,1],S:[0,1],
+               ArrowLeft:[-1,0],a:[-1,0],A:[-1,0],ArrowRight:[1,0],d:[1,0],D:[1,0]};
+  if(e.key === ' '){ e.preventDefault(); endTurn(ST); return; }
+  const d = map[e.key];
+  if(d){ e.preventDefault(); if(e.shiftKey) dash(ST, d[0], d[1]); else tryMove(ST, d[0], d[1]); }
+});
+
+cv.addEventListener('click', e => {
+  if(!ST || ST.over) return;
+  const r = cv.getBoundingClientRect();
+  const x = Math.floor((e.clientX - r.left) / CELL), y = Math.floor((e.clientY - r.top) / CELL);
+  const p = ST.players[ST.cur];
+  const dx = x - p.x, dy = y - p.y;
+  if(Math.abs(dx) + Math.abs(dy) === 1){ if(e.shiftKey) dash(ST, dx, dy); else tryMove(ST, dx, dy); }
+});
+
+window.addEventListener('resize', () => { if(ST){ fitCanvas(ST); render(ST); } });
+
+// 试运行：固定种子先跑一张地图
+newGame(2, 20261007);
+</script>
+</body>
+</html>
